@@ -19,10 +19,13 @@
   --radius:          8px;
   --sidebar-w:       280px;
   --header-h:        64px;
-  --font-mono:       "SFMono-Regular", Consolas, monospace;
+  --font-mono:       "JetBrains Mono", "SFMono-Regular", Consolas, "Courier New", monospace;
+  --font-sans:       "Inter", "Noto Sans SC", "PingFang SC", "Hiragino Sans GB",
+                     "Microsoft YaHei", "WenQuanYi Micro Hei", "Source Han Sans SC",
+                     -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--color-bg); color: var(--color-text); font-size: 14px; line-height: 1.6; }
+html, body { height: 100%; font-family: var(--font-sans); background: var(--color-bg); color: var(--color-text); font-size: 14px; line-height: 1.6; }
 
 a { color: var(--color-accent); text-decoration: none; }
 
