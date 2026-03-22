@@ -3,7 +3,7 @@ import { BaseAgent } from "./baseAgent.js";
 import type { AgentRole } from "../types.js";
 
 /**
- * Agent Registry - manages all specialized agents in the multi-agent system.
+ * Agent Registry - manages developer employee agents.
  * Each agent instance maintains its own conversation context with the Copilot SDK.
  */
 export class AgentRegistry {
@@ -31,14 +31,7 @@ export class AgentRegistry {
   }
 
   private initializeAgents(): void {
-    const roles: AgentRole[] = [
-      "planning",
-      "implementation",
-      "ci",
-      "review",
-      "retrospective",
-      "orchestrator",
-    ];
+    const roles: AgentRole[] = ["developer_employee"];
     for (const role of roles) {
       this.agents.set(role, new BaseAgent(role, this.client));
     }

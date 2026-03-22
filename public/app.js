@@ -7,8 +7,11 @@
 // State
 // ============================================================
 const state = {
-  currentAgent: "orchestrator",
+  currentAgent: "developer_employee",
+  currentEmployeeId: null,
+  editingEmployeeId: null,
   agents: [],
+  developerEmployees: [],
   currentSprintId: null,
   sprints: [],
   pendingTaskStatus: "todo",
@@ -18,41 +21,11 @@ const state = {
 // Quick prompts per agent
 // ============================================================
 const QUICK_PROMPTS = {
-  orchestrator: [
-    "帮我规划第一个迭代周期",
-    "解释一下 PDCA 循环",
-    "我的项目是一个博客系统，怎么开始？",
-    "迭代开发 vs 瀑布流的区别",
-  ],
-  planning: [
-    "帮我拆解用户登录功能的任务",
-    "如何估算任务工作量？",
-    "这个 Sprint 目标合理吗？",
-    "帮我从 Backlog 中挑选优先任务",
-  ],
-  implementation: [
-    "这个功能应该用哪种架构模式？",
-    "如何避免范围蔓延？",
-    "代码审查清单有哪些？",
-    "TDD 怎么实践？",
-  ],
-  ci: [
-    "帮我主持今天的站会",
-    "我遇到了一个阻塞，该怎么办？",
-    "GitHub Actions 如何配置？",
-    "我们的 Sprint 进度正常吗？",
-  ],
-  review: [
-    "帮我准备 Demo 演示脚本",
-    "如何向产品负责人展示功能？",
-    "收集用户反馈的最佳方式？",
-    "Sprint 目标完成了 80%，怎么汇报？",
-  ],
-  retrospective: [
-    "帮我主持一个回顾会议",
-    "这次迭代哪里可以改进？",
-    "Start-Stop-Continue 方法怎么用？",
-    "如何让团队在回顾中更坦诚？",
+  developer_employee: [
+    "我有一个新需求，帮我自动完成计划→开发→检查→评审→复盘",
+    "把“用户登录+注册”拆成本轮迭代任务并给出落地实现步骤",
+    "根据当前迭代目标，给我完整测试与 CI 检查清单",
+    "请按一个开发员工的方式推进下一轮改进计划",
   ],
 };
 
@@ -106,6 +79,26 @@ const API = {
   async clearHistory(agentRole) {
     await fetch(`/api/agents/${agentRole}/history`, { method: "DELETE" });
   },
+  async getDeveloperEmployees() {
+    const r = await fetch("/api/developer-employees");
+    return r.json();
+  },
+  async createDeveloperEmployee(data) {
+    const r = await fetch("/api/developer-employees", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return r.json();
+  },
+  async updateDeveloperEmployee(id, data) {
+    const r = await fetch(`/api/developer-employees/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return r.json();
+  },
   /**
    * Send a message via SSE streaming.
    * @returns {Promise<void>} resolves when done
@@ -113,7 +106,10 @@ const API = {
   chatStream(message, agentRole, sprintContext, onChunk, onDone, onError) {
     return fetch("/api/chat", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(state.currentEmployeeId ? { "x-developer-employee-id": state.currentEmployeeId } : {}),
+      },
       body: JSON.stringify({ message, agentRole, sprintContext }),
     }).then((res) => {
       const reader = res.body.getReader();
@@ -172,15 +168,32 @@ function renderAgentList() {
   list.innerHTML = "";
   for (const agent of state.agents) {
     const li = document.createElement("li");
-    li.className = `agent-item${agent.role === state.currentAgent ? " active" : ""}`;
+    li.className = `agent-item${agent.role === state.currentAgent && agent.employeeId === state.currentEmployeeId ? " active" : ""}`;
     li.dataset.role = agent.role;
+    li.dataset.employeeId = agent.employeeId;
     li.innerHTML = `
       <span class="agent-icon">${agent.icon}</span>
       <div class="agent-info">
         <div class="agent-name">${agent.nameZh}</div>
         <div class="agent-name-zh">${agent.name}</div>
-      </div>`;
-    li.addEventListener("click", () => selectAgent(agent.role));
+        <div class="agent-workdir">${escapeHtml(agent.workDirectory ?? "")}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm edit-employee-btn" title="编辑开发员工">✏️</button>`;
+    li.addEventListener("click", () => selectAgent(agent.role, agent.employeeId));
+    li.querySelector(".edit-employee-btn")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const employee = state.developerEmployees.find((d) => d.id === agent.employeeId);
+      if (!employee) return;
+      state.editingEmployeeId = employee.id;
+      document.getElementById("employee-name-zh").value = employee.nameZh;
+      document.getElementById("employee-name").value = employee.name;
+      document.getElementById("employee-work-directory").value = employee.workDirectory;
+      document.getElementById("employee-desc-zh").value = employee.descriptionZh;
+      document.getElementById("employee-desc").value = employee.description;
+      document.getElementById("employee-icon").value = employee.icon;
+      document.getElementById("btn-create-employee").textContent = "保存开发员工";
+      openModal("modal-employee");
+    });
     list.appendChild(li);
   }
 }
@@ -314,12 +327,7 @@ function renderQuickPrompts() {
 
 function updatePdcaWheel(agentRole) {
   const phaseMap = {
-    orchestrator: null,
-    planning: "plan",
-    implementation: "do",
-    ci: "do",
-    review: "check",
-    retrospective: "act",
+    developer_employee: "plan",
   };
   const phase = phaseMap[agentRole];
   document.querySelectorAll(".pdca-item").forEach((el) => {
@@ -330,20 +338,25 @@ function updatePdcaWheel(agentRole) {
 // ============================================================
 // Chat logic
 // ============================================================
-function selectAgent(role) {
+function selectAgent(role, employeeId = state.currentEmployeeId) {
   state.currentAgent = role;
-  const agent = state.agents.find((a) => a.role === role);
+  state.currentEmployeeId = employeeId ?? state.currentEmployeeId;
+  const agent = state.agents.find((a) => a.role === role && a.employeeId === state.currentEmployeeId)
+    ?? state.agents.find((a) => a.role === role);
   if (!agent) return;
 
   // Update sidebar selection
   document.querySelectorAll(".agent-item").forEach((el) => {
-    el.classList.toggle("active", el.dataset.role === role);
+    el.classList.toggle(
+      "active",
+      el.dataset.role === role && el.dataset.employeeId === String(state.currentEmployeeId ?? ""),
+    );
   });
 
   // Update chat header
   document.getElementById("chat-agent-icon").textContent = agent.icon;
   document.getElementById("chat-agent-name").textContent = `${agent.nameZh} (${agent.name})`;
-  document.getElementById("chat-agent-desc").textContent = agent.descriptionZh;
+  document.getElementById("chat-agent-desc").textContent = `${agent.descriptionZh} · 工作目录：${agent.workDirectory ?? "-"}`;
 
   // Update quick prompts
   renderQuickPrompts();
@@ -504,6 +517,17 @@ function closeModal(id) {
   document.getElementById(id).classList.add("hidden");
 }
 
+function resetEmployeeModal() {
+  state.editingEmployeeId = null;
+  document.getElementById("btn-create-employee").textContent = "创建开发员工";
+  document.getElementById("employee-name-zh").value = "";
+  document.getElementById("employee-name").value = "";
+  document.getElementById("employee-work-directory").value = "";
+  document.getElementById("employee-desc-zh").value = "";
+  document.getElementById("employee-desc").value = "";
+  document.getElementById("employee-icon").value = "🧑‍💻";
+}
+
 // ============================================================
 // Simple markdown → HTML converter
 // ============================================================
@@ -561,14 +585,29 @@ function escapeHtml(str) {
 // Initialization
 // ============================================================
 async function init() {
+  // Load developer employees
+  try {
+    state.developerEmployees = await API.getDeveloperEmployees();
+    if (state.developerEmployees.length > 0) {
+      state.currentEmployeeId = state.developerEmployees[0].id;
+    }
+  } catch (e) {
+    console.error("Failed to load developer employees:", e);
+    state.developerEmployees = [];
+  }
+
   // Load agents
   try {
     state.agents = await API.getAgents();
+    if (!state.currentEmployeeId && state.agents.length > 0) {
+      state.currentEmployeeId = state.agents[0].employeeId ?? null;
+    }
   } catch (e) {
     console.error("Failed to load agents:", e);
     state.agents = [];
   }
   renderAgentList();
+  selectAgent(state.currentAgent, state.currentEmployeeId);
   renderQuickPrompts();
 
   // Load sprints
@@ -614,6 +653,12 @@ async function init() {
   document.getElementById("btn-new-sprint").addEventListener("click", () =>
     openModal("modal-sprint"),
   );
+  document.getElementById("btn-new-employee").addEventListener("click", () =>
+    {
+      resetEmployeeModal();
+      openModal("modal-employee");
+    },
+  );
 
   // Modal close buttons
   document.querySelectorAll(".modal-close, [data-modal]").forEach((btn) => {
@@ -643,10 +688,61 @@ async function init() {
     renderSprintPanel();
     renderBoard();
 
-    // Suggest planning
-    selectAgent("planning");
+    // Suggest first message
+    selectAgent("developer_employee", state.currentEmployeeId);
     document.getElementById("user-input").value =
       `我刚创建了一个新迭代：「${sprint.name}」，目标是「${sprint.goal}」，请帮我规划具体的任务清单。`;
+  });
+
+  // Create developer employee
+  document.getElementById("btn-create-employee").addEventListener("click", async () => {
+    const nameZh = document.getElementById("employee-name-zh").value.trim();
+    const name = document.getElementById("employee-name").value.trim();
+    const workDirectory = document.getElementById("employee-work-directory").value.trim();
+    const descriptionZh = document.getElementById("employee-desc-zh").value.trim();
+    const description = document.getElementById("employee-desc").value.trim();
+    const icon = document.getElementById("employee-icon").value.trim();
+
+    if (!name || !nameZh || !workDirectory) {
+      alert("请填写中文名、英文名和工作目录");
+      return;
+    }
+
+    if (state.editingEmployeeId) {
+      await API.updateDeveloperEmployee(state.editingEmployeeId, {
+        name,
+        nameZh,
+        description: description || undefined,
+        descriptionZh: descriptionZh || undefined,
+        workDirectory,
+        icon: icon || "🧑‍💻",
+      });
+    } else {
+      await API.createDeveloperEmployee({
+        name,
+        nameZh,
+        description: description || undefined,
+        descriptionZh: descriptionZh || undefined,
+        workDirectory,
+        icon: icon || "🧑‍💻",
+      });
+    }
+
+    state.developerEmployees = await API.getDeveloperEmployees();
+    state.agents = await API.getAgents();
+    if (state.editingEmployeeId) {
+      state.currentEmployeeId = state.editingEmployeeId;
+    } else {
+      const latest = state.developerEmployees[state.developerEmployees.length - 1];
+      state.currentEmployeeId = latest?.id ?? state.currentEmployeeId;
+    }
+    state.editingEmployeeId = null;
+    document.getElementById("btn-create-employee").textContent = "创建开发员工";
+    renderAgentList();
+    selectAgent("developer_employee", state.currentEmployeeId);
+
+    closeModal("modal-employee");
+    resetEmployeeModal();
   });
 
   // Add task buttons
@@ -694,8 +790,15 @@ async function init() {
   // Close modal on backdrop click
   document.querySelectorAll(".modal").forEach((modal) => {
     modal.addEventListener("click", (e) => {
-      if (e.target === modal) modal.classList.add("hidden");
+      if (e.target === modal) {
+        modal.classList.add("hidden");
+        if (modal.id === "modal-employee") resetEmployeeModal();
+      }
     });
+  });
+
+  document.querySelectorAll('[data-modal="modal-employee"]').forEach((btn) => {
+    btn.addEventListener("click", resetEmployeeModal);
   });
 }
 
