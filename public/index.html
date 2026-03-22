@@ -37,9 +37,12 @@
       <!-- Sidebar: agent selector + sprint info -->
       <aside class="sidebar">
         <section class="sidebar-section">
-          <h2 class="section-title">🤖 专业代理</h2>
-          <p class="section-hint">选择一个代理开始对话</p>
+          <h2 class="section-title">🧑‍💻 开发员工</h2>
+          <p class="section-hint">选择开发员工开始对话（可配置工作目录）</p>
           <ul id="agent-list" class="agent-list"></ul>
+          <button id="btn-new-employee" class="btn btn-secondary btn-sm sidebar-add-employee">
+            + 新建开发员工
+          </button>
         </section>
 
         <section class="sidebar-section">
@@ -88,28 +91,28 @@
         <!-- Chat tab -->
         <div id="tab-chat" class="tab-content active">
           <div class="chat-header" id="chat-header">
-            <span class="chat-agent-icon" id="chat-agent-icon">🎭</span>
+            <span class="chat-agent-icon" id="chat-agent-icon">🧑‍💻</span>
             <div>
-              <div class="chat-agent-name" id="chat-agent-name">总协调代理 (Orchestrator)</div>
-              <div class="chat-agent-desc" id="chat-agent-desc">协调整个迭代开发流程，管理所有代理协作</div>
+              <div class="chat-agent-name" id="chat-agent-name">开发员工 1号 (Developer Employee 1)</div>
+              <div class="chat-agent-desc" id="chat-agent-desc">自动化全流程开发员工 · 工作目录：/workspace/default</div>
             </div>
             <button id="btn-clear-history" class="btn btn-secondary btn-sm" title="清除对话历史">🗑️ 清除历史</button>
           </div>
 
           <div class="messages" id="messages">
             <div class="message assistant">
-              <div class="message-avatar">🎭</div>
+              <div class="message-avatar">🧑‍💻</div>
               <div class="message-content">
-                <p>你好！我是总协调代理，负责协调整个迭代开发流程。</p>
+                <p>你好！我是开发员工，会自动完成需求的计划、开发、集成、评审和复盘。</p>
                 <p>我可以帮助你：</p>
                 <ul>
-                  <li>📋 <strong>计划迭代周期</strong> – 拆解任务，设置优先级</li>
-                  <li>💻 <strong>指导开发实现</strong> – 架构设计，编码规范</li>
-                  <li>🔄 <strong>持续集成与站会</strong> – 同步进度，解决阻碍</li>
-                  <li>🎯 <strong>评审与演示</strong> – 获取用户反馈</li>
-                  <li>🔍 <strong>迭代回顾复盘</strong> – 持续改进团队</li>
+                  <li>📋 <strong>需求拆解与迭代计划</strong></li>
+                  <li>💻 <strong>开发实现与架构建议</strong></li>
+                  <li>🔄 <strong>测试与持续集成检查</strong></li>
+                  <li>🎯 <strong>评审演示与反馈整理</strong></li>
+                  <li>🔍 <strong>复盘与下一轮改进</strong></li>
                 </ul>
-                <p>从左侧选择一个专业代理开始，或者告诉我你的项目，我来帮你规划第一个迭代周期！</p>
+                <p>你可以在左侧创建多个开发员工，并为每个员工配置工作目录与基本信息。</p>
               </div>
             </div>
           </div>
@@ -166,7 +169,7 @@
               <div class="step-number">1</div>
               <div class="step-body">
                 <h3>📋 迭代计划 (Plan)</h3>
-                <p>选择「迭代计划代理」，描述你的项目目标。代理会帮你：</p>
+                <p>向开发员工描述你的项目目标。开发员工会先完成计划阶段：</p>
                 <ul>
                   <li>从需求池（Backlog）中挑选优先级最高的任务</li>
                   <li>设定本轮迭代的明确目标（Sprint Goal）</li>
@@ -178,7 +181,7 @@
               <div class="step-number">2</div>
               <div class="step-body">
                 <h3>💻 执行开发 (Do)</h3>
-                <p>选择「执行开发代理」，获得开发指导：</p>
+                <p>同一个开发员工会继续推进执行开发阶段：</p>
                 <ul>
                   <li>架构设计与技术选型建议</li>
                   <li>代码质量与最佳实践</li>
@@ -190,7 +193,7 @@
               <div class="step-number">3</div>
               <div class="step-body">
                 <h3>🔄 持续集成与站会 (Do + Check)</h3>
-                <p>选择「持续集成与站会代理」，每天同步进度：</p>
+                <p>同一个开发员工会继续推进持续集成与检查阶段：</p>
                 <ul>
                   <li>每日 15 分钟站会（昨天做了什么？今天做什么？遇到阻碍？）</li>
                   <li>CI/CD 流水线设置</li>
@@ -202,7 +205,7 @@
               <div class="step-number">4</div>
               <div class="step-body">
                 <h3>🎯 评审演示 (Check)</h3>
-                <p>选择「评审演示代理」，展示成果获取反馈：</p>
+                <p>同一个开发员工会继续推进评审阶段：</p>
                 <ul>
                   <li>准备 Demo 脚本</li>
                   <li>向产品负责人演示功能</li>
@@ -214,7 +217,7 @@
               <div class="step-number">5</div>
               <div class="step-body">
                 <h3>🔍 回顾复盘 (Act)</h3>
-                <p>选择「回顾复盘代理」，持续改进团队：</p>
+                <p>同一个开发员工会继续推进复盘阶段：</p>
                 <ul>
                   <li>哪里做得好？哪里有待改进？</li>
                   <li>生成可执行的改进行动项</li>
@@ -284,6 +287,40 @@
         <div class="modal-footer">
           <button class="btn btn-secondary" data-modal="modal-sprint">取消</button>
           <button class="btn btn-primary" id="btn-create-sprint">创建迭代</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Developer Employee Modal -->
+    <div id="modal-employee" class="modal hidden">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3>🧑‍💻 新建开发员工</h3>
+          <button class="modal-close" data-modal="modal-employee">✕</button>
+        </div>
+        <div class="modal-body">
+          <label>中文名 *
+            <input type="text" id="employee-name-zh" placeholder="例：开发员工 2号" />
+          </label>
+          <label>英文名 *
+            <input type="text" id="employee-name" placeholder="Example: Developer Employee 2" />
+          </label>
+          <label>工作目录 *
+            <input type="text" id="employee-work-directory" placeholder="/workspace/project-a" />
+          </label>
+          <label>中文描述
+            <textarea id="employee-desc-zh" rows="2" placeholder="例如：负责移动端功能迭代"></textarea>
+          </label>
+          <label>英文描述
+            <textarea id="employee-desc" rows="2" placeholder="Example: Focuses on mobile feature iteration"></textarea>
+          </label>
+          <label>头像图标（emoji）
+            <input type="text" id="employee-icon" value="🧑‍💻" />
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-modal="modal-employee">取消</button>
+          <button class="btn btn-primary" id="btn-create-employee">创建开发员工</button>
         </div>
       </div>
     </div>

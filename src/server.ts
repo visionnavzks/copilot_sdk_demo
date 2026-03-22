@@ -4,7 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import rateLimit from "express-rate-limit";
 import { getRegistry } from "./agents/registry.js";
-import type { AgentRole, Sprint, Task } from "./types.js";
+import type { AgentRole, DeveloperEmployee, Sprint, Task } from "./types.js";
 import { AGENT_CONFIGS } from "./types.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -38,10 +38,43 @@ app.use(express.static(path.join(__dirname, "../public")));
 // In-memory state (suitable for demo; swap with a DB for production)
 // -------------------------------------------------------------------
 const sprints: Map<string, Sprint> = new Map();
+const developerEmployees: Map<string, DeveloperEmployee> = new Map();
 let sprintCounter = 0;
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function toChatAgentInfo(employee: DeveloperEmployee) {
+  const base = AGENT_CONFIGS.developer_employee;
+  return {
+    role: base.role,
+    name: employee.name,
+    nameZh: employee.nameZh,
+    description: employee.description,
+    descriptionZh: employee.descriptionZh,
+    icon: employee.icon,
+    employeeId: employee.id,
+    workDirectory: employee.workDirectory,
+  };
+}
+
+function ensureDefaultDeveloperEmployee(): DeveloperEmployee {
+  const existing = Array.from(developerEmployees.values())[0];
+  if (existing) return existing;
+  const now = new Date().toISOString();
+  const defaultEmployee: DeveloperEmployee = {
+    id: generateId(),
+    name: "Developer Employee 1",
+    nameZh: "开发员工 1号",
+    description: "Autonomous full-cycle developer employee",
+    descriptionZh: "自动化全流程开发员工",
+    workDirectory: "/workspace/default",
+    icon: "🧑‍💻",
+    createdAt: now,
+  };
+  developerEmployees.set(defaultEmployee.id, defaultEmployee);
+  return defaultEmployee;
 }
 
 // -------------------------------------------------------------------
@@ -55,15 +88,67 @@ app.get("/api/health", (_req, res) => {
 // Agents endpoint – return agent metadata for the UI
 // -------------------------------------------------------------------
 app.get("/api/agents", (_req, res) => {
-  const agents = Object.values(AGENT_CONFIGS).map(({ role, name, nameZh, description, descriptionZh, icon }) => ({
-    role,
+  const employees = Array.from(developerEmployees.values());
+  const source = employees.length > 0 ? employees : [ensureDefaultDeveloperEmployee()];
+  const agents = source.map(toChatAgentInfo);
+  res.json(agents);
+});
+
+app.get("/api/developer-employees", (_req, res) => {
+  const employees = Array.from(developerEmployees.values());
+  const source = employees.length > 0 ? employees : [ensureDefaultDeveloperEmployee()];
+  res.json(source);
+});
+
+app.post("/api/developer-employees", (req, res) => {
+  const {
     name,
     nameZh,
     description,
     descriptionZh,
+    workDirectory,
     icon,
-  }));
-  res.json(agents);
+  } = req.body as Partial<DeveloperEmployee>;
+
+  if (!name || !nameZh || !workDirectory) {
+    res.status(400).json({ error: "name, nameZh, and workDirectory are required" });
+    return;
+  }
+
+  const employee: DeveloperEmployee = {
+    id: generateId(),
+    name,
+    nameZh,
+    description: description ?? "Autonomous full-cycle developer employee",
+    descriptionZh: descriptionZh ?? "自动化全流程开发员工",
+    workDirectory,
+    icon: icon ?? "🧑‍💻",
+    createdAt: new Date().toISOString(),
+  };
+  developerEmployees.set(employee.id, employee);
+  res.status(201).json(employee);
+});
+
+app.patch("/api/developer-employees/:id", (req, res) => {
+  const employee = developerEmployees.get(req.params.id);
+  if (!employee) {
+    res.status(404).json({ error: "Developer employee not found" });
+    return;
+  }
+
+  if (req.body.name !== undefined) employee.name = String(req.body.name);
+  if (req.body.nameZh !== undefined) employee.nameZh = String(req.body.nameZh);
+  if (req.body.description !== undefined) employee.description = String(req.body.description);
+  if (req.body.descriptionZh !== undefined) employee.descriptionZh = String(req.body.descriptionZh);
+  if (req.body.workDirectory !== undefined) employee.workDirectory = String(req.body.workDirectory);
+  if (req.body.icon !== undefined) employee.icon = String(req.body.icon);
+
+  if (!employee.name || !employee.nameZh || !employee.workDirectory) {
+    res.status(400).json({ error: "name, nameZh, and workDirectory cannot be empty" });
+    return;
+  }
+
+  res.json(employee);
 });
 
 // -------------------------------------------------------------------
@@ -102,9 +187,25 @@ app.post("/api/chat", chatLimiter, async (req, res) => {
     await registry.start();
 
     const agent = registry.getAgent(agentRole);
-    const contextStr = sprintContext
-      ? `Current sprint: ${sprintContext.name} - Goal: ${sprintContext.goal}. Tasks: ${sprintContext.tasks.map((t) => t.title).join(", ")}`
+    const selectedEmployeeId = typeof req.headers["x-developer-employee-id"] === "string"
+      ? req.headers["x-developer-employee-id"]
       : undefined;
+    const selectedEmployee = selectedEmployeeId
+      ? developerEmployees.get(selectedEmployeeId) ?? ensureDefaultDeveloperEmployee()
+      : ensureDefaultDeveloperEmployee();
+
+    const contextParts: string[] = [];
+    if (selectedEmployee) {
+      contextParts.push(
+        `Developer employee profile: ${selectedEmployee.nameZh} (${selectedEmployee.name}), work directory: ${selectedEmployee.workDirectory}, description: ${selectedEmployee.descriptionZh}`,
+      );
+    }
+    if (sprintContext) {
+      contextParts.push(
+        `Current sprint: ${sprintContext.name} - Goal: ${sprintContext.goal}. Tasks: ${sprintContext.tasks.map((t) => t.title).join(", ")}`,
+      );
+    }
+    const contextStr = contextParts.length > 0 ? contextParts.join(" | ") : undefined;
 
     await agent.chat(
       message,
