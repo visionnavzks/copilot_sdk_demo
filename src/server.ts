@@ -136,19 +136,12 @@ app.patch("/api/developer-employees/:id", (req, res) => {
     return;
   }
 
-  const allowed = [
-    "name",
-    "nameZh",
-    "description",
-    "descriptionZh",
-    "workDirectory",
-    "icon",
-  ] as const;
-  for (const key of allowed) {
-    if (req.body[key] !== undefined) {
-      (employee as unknown as Record<string, unknown>)[key] = req.body[key];
-    }
-  }
+  if (req.body.name !== undefined) employee.name = String(req.body.name);
+  if (req.body.nameZh !== undefined) employee.nameZh = String(req.body.nameZh);
+  if (req.body.description !== undefined) employee.description = String(req.body.description);
+  if (req.body.descriptionZh !== undefined) employee.descriptionZh = String(req.body.descriptionZh);
+  if (req.body.workDirectory !== undefined) employee.workDirectory = String(req.body.workDirectory);
+  if (req.body.icon !== undefined) employee.icon = String(req.body.icon);
 
   if (!employee.name || !employee.nameZh || !employee.workDirectory) {
     res.status(400).json({ error: "name, nameZh, and workDirectory cannot be empty" });
