@@ -1,0 +1,38 @@
+{
+  "name": "copilot_sdk_demo",
+  "version": "1.0.0",
+  "description": "Iterative Process Agent System - Multi-agent web app powered by GitHub Copilot SDK",
+  "main": "index.js",
+  "scripts": {
+    "start": "node --import tsx/esm src/server.ts",
+    "dev": "node --import tsx/esm --watch src/server.ts",
+    "build": "tsc",
+    "start:prod": "node dist/server.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/visionnavzks/copilot_sdk_demo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/visionnavzks/copilot_sdk_demo/issues"
+  },
+  "homepage": "https://github.com/visionnavzks/copilot_sdk_demo#readme",
+  "dependencies": {
+    "@github/copilot-sdk": "^0.2.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.3.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
